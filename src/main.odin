@@ -86,8 +86,8 @@ main :: proc(){
 	// data := stbi.load("images/1millionbeers.jpg",&width, &height, &nr_channels, 3);
 	// fmt.print(nr_channels, width, height, data);
 
-	// image := rl.LoadTexture("images/icon.png");
-	image := rl.LoadTexture("images/cursor.png");
+	image := rl.LoadTexture("images/icon.png");
+	// image := rl.LoadTexture("images/cursor.png");
 	// image := rl.LoadTextureFromImage(file);
 
 	treshold: f32 = 0.8;
@@ -157,9 +157,3 @@ update_player :: proc(state: ^State, p: ^Player, event: mm.Event){
 	// fmt.println("Player got ", event);
 }
 
-remap :: proc(x, froma, toa, fromb, tob: f32) -> f32 {
-	return linalg.lerp(
-		fromb, tob,
-		linalg.unlerp(froma, toa, x)
-	)
-}

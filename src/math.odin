@@ -168,3 +168,10 @@ combine :: proc{
 apply :: proc{
     apply_2d,
 }
+
+remap :: proc(x, froma, toa, fromb, tob: f32) -> f32 {
+	return linalg.lerp(
+		fromb, tob,
+		linalg.unlerp(froma, toa, x)
+	)
+}
