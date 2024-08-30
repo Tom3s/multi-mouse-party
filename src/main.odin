@@ -5,12 +5,8 @@ import "core:c"
 import "core:c/libc"
 import "core:math/linalg"
 
-
-
 import mm "manymouse"
 import rl "vendor:raylib"
-import stbi "vendor:stb/image"
-
 
 import Signal "signal"
 

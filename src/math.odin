@@ -158,7 +158,7 @@ normal_transform :: proc(transform: Transform_3D) -> Transform_3D{
         t[0, 1], t[1, 1], t[2, 1], 0,
         t[0, 2], t[1, 2], t[2, 2], 0,
         0,       0,       0,       1,
-    }
+    };
 }
 
 combine :: proc{
@@ -171,7 +171,7 @@ apply :: proc{
 
 remap :: proc(x, froma, toa, fromb, tob: f32) -> f32 {
 	return linalg.lerp(
-		fromb, tob,
-		linalg.unlerp(froma, toa, x)
-	)
+		fromb, tob, \
+		linalg.unlerp(froma, toa, x), \
+	);
 }

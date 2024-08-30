@@ -20,7 +20,12 @@ Event :: struct {
     maxval: c.int,
 }
 
-foreign import lib "manymouse.a"
+when ODIN_OS == .Windows {
+    foreign import lib "manymouse_windows.a"
+}
+when ODIN_OS == .Linux {
+    foreign import lib "linux/manymouse.a"
+}
 
 @(link_prefix="ManyMouse_")
 foreign lib {
