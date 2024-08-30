@@ -50,9 +50,6 @@ main :: proc(){
 		fmt.println(mm.DeviceName(cast(c.uint) i));
 	}
 
-	// bs := signal.init(int);
-	// button_down := Signal.init(int);
-	// button_up := Signal.init(int);
 
 	// print_button_down :: proc(data: rawptr, device_id: int) {
 	// 	fmt.println("Player with device", device_id, "pressed click!!!");
