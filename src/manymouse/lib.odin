@@ -36,11 +36,3 @@ foreign lib {
 	PollEvent :: proc(event: ^Event) -> c.int  ---;
 }
 
-@(link_prefix="ManyMouse_")
-foreign lib {
-	Init :: proc() -> c.int --- 
-	DriverName :: proc() -> cstring ---;
-	Quit :: proc() ---;
-	DeviceName :: proc(index: c.uint) -> cstring ---;
-	PollEvent :: proc(event: ^Event) -> c.int  ---;
-}
