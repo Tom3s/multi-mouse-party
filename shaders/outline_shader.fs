@@ -29,7 +29,7 @@ void main(){
 	float shadowAlpha = smoothstep(treshold - 0.05, treshold + 0.05, currentColorShadow);
 
 
-	finalColor = mix(mainColor, outlineColor, alpha);
+	finalColor = mix(outlineColor, mainColor, alpha);
 	finalColor = mix(BLACK, finalColor, outlineAlpha);
 	finalColor.a = outlineAlpha + shadowAlpha;
 	// finalColor.a = shadowAlpha;
