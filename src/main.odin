@@ -15,7 +15,7 @@ import rl "vendor:raylib"
 import Signal "signal"
 
 WINDOW_SIZE :: [2]c.int{1280, 720};
-NR_PLAYERS :: 2;
+NR_PLAYERS :: 4;
 
 App_State :: struct{
     gpa: mem.Allocator,
@@ -77,12 +77,27 @@ Player :: struct {
 	color: [4]f32,
 }
 
+DEFAULT_COLORS := [?]v4 {
+	{ 1, 0.06, 0.08627451, 1.0}, 
+	{ 0.0627451, 0.57254905, 0.7745098, 1.0},
+	{ 0.65882355, 0.070588239, 0.53333336, 1.0},
+	{ 0.188235298, 0.71764708, 0.14117648, 1.0},
+	{ 0.72156864, 0.6, 0.0627451, 1.0},
+	{ 0.84705883, 0.6509804, 0.64705884, 1.0},
+};
+
 main :: proc(){
     context.allocator      = mem.panic_allocator();
     context.temp_allocator = mem.panic_allocator();
 
     rl.InitWindow(WINDOW_SIZE.x, WINDOW_SIZE.y, "Multi Mouse Party (DEBUG)");
     defer rl.CloseWindow();
+
+	rl.SetMousePosition(rl.GetScreenWidth() / 2, rl.GetScreenHeight() / 2);
+	rl.HideCursor();
+	rl.DisableCursor();
+	defer rl.ShowCursor();
+	defer rl.EnableCursor();
 
 	// Eloszor kell a RayLib Init
 
@@ -104,6 +119,7 @@ main :: proc(){
 		strings.write_int(&builder, i + 1);
 
 		rl.BeginDrawing();
+		rl.ClearBackground(rl.GetColor(BACKGROUND_CLEAR_COLOR));
 		rl.DrawText(
 			strings.to_cstring(&builder),
 			50, 50,
@@ -140,12 +156,7 @@ init_player :: proc(p: ^Player, id: u32) {
 		},
 		velocity = {},
 	};
-	p.color = {
-		rand.float32(),
-		rand.float32(),
-		rand.float32(),
-		1.0
-	}
+	p.color = DEFAULT_COLORS[id];
 	p.device_id = get_device_for_assign();
 	// Check if already used
 	fmt.println("[main.odin] Assigned device ", p.device_id, " to player ", p.id);

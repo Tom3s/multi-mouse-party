@@ -23,7 +23,7 @@ void main(){
 	float outlineAlpha = smoothstep(treshold - 0.05, treshold + 0.05, currentColor + outlineWidth);
 	float alpha = smoothstep(treshold - 0.05, treshold + 0.05, currentColor);
 
-	float dropShadowDistance = 0.05;
+	float dropShadowDistance = 0.00; // change this to get drop shadow
 
 	float currentColorShadow = texture(texture0, fragTexCoord - vec2(dropShadowDistance)).r;
 	float shadowAlpha = smoothstep(treshold - 0.05, treshold + 0.05, currentColorShadow);
