@@ -89,7 +89,6 @@ main :: proc(){
 	nr_mouses := mm.Init();
 	defer mm.Quit();
 	
-	event: mm.Event = {}
 
     state: App_State;
     init_app_state(&state);
@@ -120,7 +119,6 @@ main :: proc(){
     for !rl.WindowShouldClose(){
         err := free_all(state.frame_alloc);
 
-		update_input(&state, &event);
 
         update(&state);
 
@@ -166,7 +164,7 @@ get_device_for_assign :: proc() -> u32{
 	}
 }
 
-update_input :: proc(state: ^App_State, event: ^mm.Event) {
+update_input :: proc(state: ^App_State) {
 	/*
 		Kell ide a for, mert van h tobb event-be
 		kuldi az inputot a driver (pl ha >500hz az eger szenzor)
@@ -176,11 +174,13 @@ update_input :: proc(state: ^App_State, event: ^mm.Event) {
 		p.cursor.velocity = {0, 0};
 	}
 
-	for mm.PollEvent(event) == 1 { // DO NOT DELETE 
+	event: mm.Event = {}
+
+	for mm.PollEvent(&event) == 1 { // DO NOT DELETE 
 		for &p in state.players {
 			if p.device_id == event.device {
 				if event.type == .Relmotion {
-					relmotion := calculate_motion_vector(event^);
+					relmotion := calculate_motion_vector(event);
 					p.cursor.position += relmotion;
 					p.cursor.velocity += relmotion;
 				}
@@ -190,6 +190,7 @@ update_input :: proc(state: ^App_State, event: ^mm.Event) {
 }
 
 update :: proc(state: ^App_State){
+	update_input(state);
 }
 
 BACKGROUND_CLEAR_COLOR :: 0x202020FF;
