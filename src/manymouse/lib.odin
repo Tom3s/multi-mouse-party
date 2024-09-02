@@ -14,7 +14,7 @@ Event_Type :: enum(c.int) {
 Event :: struct {
     type: Event_Type,
     device: c.uint,
-    item: c.uint,
+    item: c.uint, // item 0 - x; item 1 - y; right-down + coordinates
     value: c.int,
     minval: c.int,
     maxval: c.int,
