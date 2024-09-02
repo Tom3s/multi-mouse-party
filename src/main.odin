@@ -172,13 +172,17 @@ update_input :: proc(state: ^App_State, event: ^mm.Event) {
 		kuldi az inputot a driver (pl ha >500hz az eger szenzor)
 		s olyankor input lag lesz
 	*/
-	for (mm.PollEvent(event) == 1) { // DO NOT DELETE 
+	for &p in state.players {
+		p.cursor.velocity = {0, 0};
+	}
+
+	for mm.PollEvent(event) == 1 { // DO NOT DELETE 
 		for &p in state.players {
-			if (p.device_id == event.device) {
-				if (event.type == .Relmotion) {
+			if p.device_id == event.device {
+				if event.type == .Relmotion {
 					relmotion := calculate_motion_vector(event^);
 					p.cursor.position += relmotion;
-					p.cursor.velocity = relmotion;
+					p.cursor.velocity += relmotion;
 				}
 			}
 		}	
