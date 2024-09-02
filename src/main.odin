@@ -195,6 +195,8 @@ update_input :: proc(state: ^App_State) {
 					p.cursor.position += relmotion;
 					p.cursor.velocity += relmotion;
 				}
+				// TODO: uncomment ha akarod hehe 😈
+				// break;
 			}
 		}	
 	}
