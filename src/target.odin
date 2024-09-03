@@ -5,7 +5,7 @@ import "core:math/rand"
 import "core:math/linalg"
 import rl "vendor:raylib"
 
-DEFAULT_TARGET_SIZE :: 32;
+DEFAULT_TARGET_SIZE :: 64;
 DEFAULT_TARGET_LIFETIME :: 5.0;
 TARGET_RESPAWN_TRESHOLD :: 1.0;
 
@@ -60,6 +60,9 @@ register_target_hit :: proc(target: ^Target) {
 }
 
 check_target_collision :: proc(target: Target, position: v2) -> bool {
+	if !target.enabled {
+		return false;
+	}
 	return linalg.distance(
 		target.position,
 		position
