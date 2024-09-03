@@ -26,6 +26,8 @@ App_State :: struct{
 
 	targets: [dynamic]Target,
 
+	labels: [16]Label,
+
 	shaders: struct {
 		cursor_material: rl.Shader, 
 	},
@@ -53,6 +55,11 @@ init_app_state :: proc(state: ^App_State){
 	state.targets = make([dynamic]Target, 0, state.gpa);
 	for i in 0..<8 {
 		append(&state.targets, make_target());
+	}
+
+	for i in 0..<16 {
+		state.labels[i] = make_label();
+		fmt.println("Initial Label Size:", state.labels[i].text_size);
 	}
 
 
@@ -233,17 +240,61 @@ update :: proc(state: ^App_State){
 	update_input(state);
 	update_delta_time(state);
 
+	for &label in state.labels {
+		update_label_animation(&label, cast(f32) state.delta_time);
+	}
+
 	for &target in state.targets {
 		update_target(&target, state^);
 		for &p in state.players {
 			if p.cursor.just_pressed && \
 				check_target_collision(target, p.cursor.position) {
-				p.score += target.lifetime / target.max_lifetime * DEFAULT_TARGET_SCORE;
+				score := target.lifetime / target.max_lifetime * DEFAULT_TARGET_SCORE;
+				p.score += score;
 				register_target_hit(&target);
+				spawn_score_label(
+					state,
+					p.cursor.position,
+					cast(i32) score,
+					rl.ColorFromNormalized(p.color),
+				)
 				break;
 			}
 		}
 	}
+}
+
+spawn_score_label :: proc(state: ^App_State, position: v2, score: i32, color: rl.Color) {
+	oldest_label: ^Label = &state.labels[0]; // Unsafe
+
+	// select from pool
+	for &label in state.labels {
+		if !label.visible {
+			// select first that's unused
+			oldest_label = &label;
+			break;
+		}
+		// failsafe, if all of them are used
+		if label.lifetime > oldest_label.lifetime {
+			oldest_label = &label;
+		}
+	}
+
+	oldest_label.original_position = position
+	
+	builder: strings.Builder; 
+	strings.builder_init(&builder, allocator = state.gpa);
+
+	strings.write_string(&builder, "+");	
+	strings.write_int(&builder, cast(int) score);
+
+	oldest_label.text = strings.to_string(builder);
+
+	fmt.println("Spawned Label Object with text:", oldest_label.text)
+
+	oldest_label.color = color;
+
+	start_label_animation(oldest_label, .Float_Up);
 }
 
 update_delta_time :: proc(state: ^App_State) {
@@ -287,6 +338,10 @@ draw :: proc(state: ^App_State){
 				rl.GetColor(0xFF_FF_FF_FF),
 			)
 		rl.EndShaderMode();
+	}
+
+	for &label in state.labels {
+		draw_label(label, state.frame_alloc);
 	}
 
 	for &p, index in state.players {
