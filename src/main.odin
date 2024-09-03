@@ -158,10 +158,10 @@ main :: proc(){
     for !rl.WindowShouldClose(){
         err := free_all(state.frame_alloc);
 
+        // buffer := make_slice([]u8, 50 * mem.Megabyte, allocator = state.frame_alloc);
 
         update(&state);
 
-        buffer := make_slice([]u8, 50 * mem.Megabyte, allocator = state.frame_alloc);
 
         rl.BeginDrawing();
 			draw(&state);
@@ -181,7 +181,7 @@ init_player :: proc(p: ^Player, id: u32) {
 	};
 	p.color = DEFAULT_COLORS[id];
 	p.device_id = get_device_for_assign();
-	// Check if already used
+	// TODO: Check if already used
 	fmt.println("[main.odin] Assigned device ", p.device_id, " to player ", p.id);
 }
 
@@ -291,9 +291,7 @@ draw :: proc(state: ^App_State){
 
 	for &p, index in state.players {
 		builder: strings.Builder; 
-		// TODO: frame_alloc megoli, azert van gpa
-		strings.builder_init(&builder, allocator = state.gpa);
-		// defer strings.
+		strings.builder_init(&builder, allocator = state.frame_alloc);
 
 		strings.write_string(&builder, "Player ");
 		
