@@ -126,6 +126,15 @@ self_rebuild :: proc(){
 
     if main_str != cache_str{
         fmt.println("Rebuilding self");
+
+        when ODIN_OS == .Windows{
+            run(`del build.exe`);
+        } else when ODIN_OS == .Linux{
+            run(`rm build.exe`);
+        } else {
+            panic("Unkown OS");
+        }
+        run(`odin build build -out:build.exe`);
         os.execvp(os.args[0], os.args[1:]);
         os.exit(0);
     }
