@@ -6,6 +6,9 @@ import "core:fmt"
 import "core:strings"
 
 main :: proc(){
+    // Do not care about memory allocation
+    // this is a script kinda
+
     args := parse_args();
     switch args.kind{
     case .Build:
@@ -58,20 +61,30 @@ build :: proc(args: Args){
     build := args.build;
 
     if build.full{
+        // Todo(Ferenc): Check if we build release 
+
         when ODIN_OS == .Windows {
-            run(`
-                cd src/manymouse
-                call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
-                cl /c /EHsc all.c
-                ar r manymouse_windows.a all.obj
-            `);
+            builder: strings.Builder;
+            strings.builder_init(&builder);
+            strings.write_string(&builder, `cd src/manymouse & `);
+
+            // Todo(Ferenc): Do better visual studio version checking
+            strings.write_string(&builder, `call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" & `);
+            strings.write_string(&builder, `call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" & `);
+
+            strings.write_string(&builder, `cl /O2 /c /EHsc all.c & `);
+            strings.write_string(&builder, `ar r manymouse_windows.a all.obj & `);
+            strings.write_string(&builder, `del *.obj & `);
+            cmd := strings.to_string(builder);
+            run(cmd);
         } else when ODIN_OS == .Linux {
             run(`
                 cd src/manymouse
                 mkdir linux
                 cd linux
-                g++ -c ../linux_evdev.c  ../x11_xinput2.c ../manymouse.c ../windows_wminput.c ../macosx_hidmanager.c ../macosx_hidutilities.c
+                g++ -O2 -c ../linux_evdev.c  ../x11_xinput2.c ../manymouse.c ../windows_wminput.c ../macosx_hidmanager.c ../macosx_hidutilities.c
                 ar r manymouse.a linux_evdev.o x11_xinput2.o manymouse.o windows_wminput.o macosx_hidmanager.o macosx_hidutilities.o
+                rm *.o
             `);
         } else {
             panic("Unkown OS");
