@@ -8,6 +8,7 @@ import "core:math/rand"
 import "core:mem"
 import "core:os"
 import "core:strings"
+import "core:time"
 
 import rl "vendor:raylib"
 
@@ -16,12 +17,15 @@ import mi     "src:mouse_input"
 import Signal "src:signal"
 
 WINDOW_SIZE :: [2]c.int{1280, 720};
-NR_PLAYERS :: 4;
+NR_PLAYERS :: 2;
 
 App_State :: struct{
     gpa: mem.Allocator,
     frame_alloc: mem.Allocator,
 	players: [dynamic]Player,
+
+	targets: [dynamic]Target,
+
 	shaders: struct {
 		cursor_material: rl.Shader, 
 	},
@@ -29,6 +33,11 @@ App_State :: struct{
 		cursor_texture: rl.Texture2D,
 		cursor_texture_size: [2]f32,
 	},
+
+	// delta_time: time.Duration, // might wanna keep Duration representation
+	delta_time: f64,
+	delta_last_tick: time.Tick,
+	
 
     // Never touch this
     arena: mem.Arena,
@@ -41,6 +50,11 @@ init_app_state :: proc(state: ^App_State){
     state.frame_alloc = mem.arena_allocator(&state.arena);
 
 	state.players = make([dynamic]Player, 0, state.gpa);
+	state.targets = make([dynamic]Target, 0, state.gpa);
+	for i in 0..<8 {
+		append(&state.targets, make_target());
+	}
+
 
 	state.shaders.cursor_material = rl.LoadShader(nil, "shaders/outline_shader.fs");
 
@@ -50,11 +64,14 @@ init_app_state :: proc(state: ^App_State){
 		cast(f32) state.textures.cursor_texture.height,
 	}
 
+	state.delta_last_tick = time.tick_now();
 }
 
 Cursor :: struct {
 	position: v2,
 	velocity: v2,
+	pressed: bool,
+	just_pressed: bool,
 }
 
 calculate_motion_vector :: proc(event: mm.Event) -> v2 {
@@ -74,6 +91,7 @@ Player :: struct {
 	device_id: u32,
 	cursor: Cursor,
 	color: [4]f32,
+	score: f32,
 }
 
 DEFAULT_COLORS := [?]v4 {
@@ -84,6 +102,7 @@ DEFAULT_COLORS := [?]v4 {
 	{ 0.72156864, 0.6, 0.0627451, 1.0},
 	{ 0.84705883, 0.6509804, 0.64705884, 1.0},
 };
+
 
 main :: proc(){
     context.allocator      = mem.panic_allocator();
@@ -131,6 +150,11 @@ main :: proc(){
 		append(&state.players, p);
 	}
 
+	for &target in state.targets {
+		respawn_target(&target);
+	}
+
+	// Main loop
     for !rl.WindowShouldClose(){
         err := free_all(state.frame_alloc);
 
@@ -182,6 +206,8 @@ update_input :: proc(state: ^App_State) {
 	*/
 	for &p in state.players {
 		p.cursor.velocity = {0, 0};
+		p.cursor.pressed = false;
+		p.cursor.just_pressed = false;
 	}
 
 	event: mm.Event = {}
@@ -193,6 +219,9 @@ update_input :: proc(state: ^App_State) {
 					relmotion := calculate_motion_vector(event);
 					p.cursor.position += relmotion;
 					p.cursor.velocity += relmotion;
+				} else if event.type == .Button {
+					p.cursor.pressed = event.value == 1;
+					p.cursor.just_pressed = p.cursor.pressed
 				}
 				break;
 			}
@@ -202,6 +231,28 @@ update_input :: proc(state: ^App_State) {
 
 update :: proc(state: ^App_State){
 	update_input(state);
+	update_delta_time(state);
+
+	for &target in state.targets {
+		update_target(&target, state^);
+		for &p in state.players {
+			if p.cursor.just_pressed && \
+				check_target_collision(target, p.cursor.position) {
+				p.score += target.lifetime / target.max_lifetime * DEFAULT_TARGET_SCORE;
+				register_target_hit(&target);
+				break;
+			}
+		}
+	}
+}
+
+update_delta_time :: proc(state: ^App_State) {
+	current_tick := time.tick_now();
+
+	// state.delta_time = time.tick_diff(state.delta_last_tick, current_tick);
+	delta_tick := time.tick_diff(state.delta_last_tick, current_tick);
+	state.delta_time = time.duration_seconds(delta_tick);
+	state.delta_last_tick = current_tick;
 }
 
 BACKGROUND_CLEAR_COLOR :: 0x202020FF;
@@ -210,6 +261,9 @@ draw :: proc(state: ^App_State){
 	rl.ClearBackground(rl.GetColor(BACKGROUND_CLEAR_COLOR));
 
 
+	for target in state.targets {
+		draw_target(target);
+	}
 
 	// These could be parameterized
 	treshold: f32 = 0.5;
@@ -233,6 +287,27 @@ draw :: proc(state: ^App_State){
 				rl.GetColor(0xFF_FF_FF_FF),
 			)
 		rl.EndShaderMode();
+	}
+
+	for &p, index in state.players {
+		builder: strings.Builder; 
+		// TODO: frame_alloc megoli, azert van gpa
+		strings.builder_init(&builder, allocator = state.gpa);
+		// defer strings.
+
+		strings.write_string(&builder, "Player ");
+		
+		strings.write_int(&builder, cast(int) p.id);
+		strings.write_string(&builder, " score: ");
+		
+		strings.write_int(&builder, cast(int) p.score);
+		
+		rl.DrawText(
+			strings.to_cstring(&builder),
+			50, 50 + cast(i32) index * 50,
+			25,
+			rl.ColorFromNormalized(p.color)
+		)
 	}
 
 }
