@@ -14,7 +14,7 @@ Label_Animation :: enum {
 LABEL_FLOAT_UP_LIFETIME :: 1.2;
 
 Label :: struct {
-	text: string, // Raylib takes as argument cstring, so this makes sense
+	text: string,
 	original_position: v2,
 
 	lifetime: f32,
@@ -63,10 +63,9 @@ draw_label :: proc (label: Label, frame_alloc: mem.Allocator) {
 	}
 
 
-	label_size := label.text_size * cast(i32) len(label.text);
+	label_size := cast(f32) (label.text_size * cast(i32) len(label.text)) * 0.4; // TODO: remove magic number
 	t := label.lifetime / LABEL_FLOAT_UP_LIFETIME;
-	label_y_offset := ease_out_cubic(t) * cast(f32) label.text_size * 2.5; // Should parameterize this constant
-	// label_y_offset := t * cast(f32) label.text_size * 2.5; // Should parameterize this constant
+	label_y_offset := ease_out_cubic(t) * cast(f32) label.text_size * 2.5; // TODO: parameterize this constant
 	
 	position := label.original_position \
 		- {cast(f32) label_size / 2, cast(f32) label.text_size / 2} \
@@ -81,7 +80,7 @@ draw_label :: proc (label: Label, frame_alloc: mem.Allocator) {
 	}
 
 	rl.DrawText(
-		strings.clone_to_cstring(label.text, allocator = frame_alloc), // TODO: look up unsafe_clone..
+		strings.clone_to_cstring(label.text, allocator = frame_alloc), // TODO: look up unsafe_clone_to_cstring(..)
 		cast(i32) position.x, cast(i32) position.y,
 		label.text_size,
 		color

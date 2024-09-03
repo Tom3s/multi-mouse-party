@@ -53,7 +53,7 @@ init_app_state :: proc(state: ^App_State){
 
 	state.players = make([dynamic]Player, 0, state.gpa);
 	state.targets = make([dynamic]Target, 0, state.gpa);
-	for i in 0..<8 {
+	for i in 0..<10 {
 		append(&state.targets, make_target());
 	}
 
@@ -165,10 +165,7 @@ main :: proc(){
     for !rl.WindowShouldClose(){
         err := free_all(state.frame_alloc);
 
-        // buffer := make_slice([]u8, 50 * mem.Megabyte, allocator = state.frame_alloc);
-
         update(&state);
-
 
         rl.BeginDrawing();
 			draw(&state);
@@ -244,12 +241,16 @@ update :: proc(state: ^App_State){
 		update_label_animation(&label, cast(f32) state.delta_time);
 	}
 
+	
+	player_hits: [dynamic]int = make([dynamic]int, NR_PLAYERS, state.frame_alloc);
+
 	for &target in state.targets {
 		update_target(&target, state^);
 		for &p in state.players {
 			if p.cursor.just_pressed && \
 				check_target_collision(target, p.cursor.position) {
 				score := target.lifetime / target.max_lifetime * DEFAULT_TARGET_SCORE;
+				// TODO: move score calculation, to allow for multipliers (ex. double, triple hits)
 				p.score += score;
 				register_target_hit(&target);
 				spawn_score_label(
@@ -258,16 +259,34 @@ update :: proc(state: ^App_State){
 					cast(i32) score,
 					rl.ColorFromNormalized(p.color),
 				)
+				player_hits[p.id] += 1;
 				break;
 			}
 		}
 	}
+
+	for hit_count, index in player_hits {
+		if hit_count > 1 {
+			spawn_combo_label(
+				state, 
+				state.players[index].cursor.position - {0, 12}, // TODO: remove magic number
+				hit_count,
+			)
+			bonus_score := 150 * linalg.pow(2.0, cast(f64) hit_count);
+			state.players[index].score += cast(f32) bonus_score;
+			spawn_score_label(
+				state,
+				state.players[index].cursor.position - {0, 24},
+				cast(i32) bonus_score,
+				rl.WHITE,
+			)
+		}
+	}
 }
 
-spawn_score_label :: proc(state: ^App_State, position: v2, score: i32, color: rl.Color) {
-	oldest_label: ^Label = &state.labels[0]; // Unsafe
+get_label_from_pool :: proc(state: ^App_State) -> ^Label {
+	oldest_label: ^Label = &state.labels[0]; // Potentially unsafe
 
-	// select from pool
 	for &label in state.labels {
 		if !label.visible {
 			// select first that's unused
@@ -280,7 +299,13 @@ spawn_score_label :: proc(state: ^App_State, position: v2, score: i32, color: rl
 		}
 	}
 
-	oldest_label.original_position = position
+	return oldest_label;
+}
+
+spawn_score_label :: proc(state: ^App_State, position: v2, score: i32, color: rl.Color) {
+	label: ^Label = get_label_from_pool(state);
+
+	label.original_position = position
 	
 	builder: strings.Builder; 
 	strings.builder_init(&builder, allocator = state.gpa);
@@ -288,19 +313,43 @@ spawn_score_label :: proc(state: ^App_State, position: v2, score: i32, color: rl
 	strings.write_string(&builder, "+");	
 	strings.write_int(&builder, cast(int) score);
 
-	oldest_label.text = strings.to_string(builder);
+	label.text = strings.to_string(builder);
+	label.text_size = 24;
 
-	fmt.println("Spawned Label Object with text:", oldest_label.text)
+	label.color = color;
 
-	oldest_label.color = color;
+	start_label_animation(label, .Float_Up);
+}
 
-	start_label_animation(oldest_label, .Float_Up);
+spawn_combo_label :: proc(state: ^App_State, position: v2, hits: int) {
+	label: ^Label = get_label_from_pool(state);
+
+	label.original_position = position
+
+	// label.text = "Double!";
+	switch (hits) {
+		case 2:
+			label.text = "Double!";
+		case 3:
+			label.text = "Triple!";
+		case 4:
+			label.text = "QUADRA!";
+		case 5:
+			label.text = "PENTA!";
+		case:
+			label.text = "what?!"
+
+	}
+	label.text_size = 48;
+
+	label.color = rl.WHITE;
+
+	start_label_animation(label, .Float_Up);
 }
 
 update_delta_time :: proc(state: ^App_State) {
 	current_tick := time.tick_now();
 
-	// state.delta_time = time.tick_diff(state.delta_last_tick, current_tick);
 	delta_tick := time.tick_diff(state.delta_last_tick, current_tick);
 	state.delta_time = time.duration_seconds(delta_tick);
 	state.delta_last_tick = current_tick;
@@ -316,7 +365,7 @@ draw :: proc(state: ^App_State){
 		draw_target(target);
 	}
 
-	// These could be parameterized
+	// TODO: These could be parameterized
 	treshold: f32 = 0.5;
 	outline_width: f32 = 0.3;
 	outline_color: v4 = {0, 0, 0, 1.0};
