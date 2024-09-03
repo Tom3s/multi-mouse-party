@@ -8,7 +8,7 @@ Event_Type :: enum(c.int) {
     Button,
     Scroll,
     Disconnect,
-    Max
+    Max,
 }
 
 Event :: struct {
