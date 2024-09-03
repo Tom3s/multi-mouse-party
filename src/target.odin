@@ -95,6 +95,15 @@ mix_color :: proc(a, b: [4]u8, t: f32) -> [4]u8 {
 	}
 }
 
+mix_color_with_alpha :: proc(a, b: [4]u8, t: f32) -> [4]u8 {
+	return {
+		lerp_u8(a.r, b.r, t),
+		lerp_u8(a.g, b.g, t),
+		lerp_u8(a.b, b.b, t),
+		lerp_u8(a.a, b.a, t),
+	}
+}
+
 lerp_u8 :: proc(a, b: u8, t: f32) -> u8 {
 	out := cast(f32) a * (1.0 - t) + cast(f32) b * t;
 
