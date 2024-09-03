@@ -1,2 +1,8 @@
 *.bin
 *.exe
+*.pdb
+*.a
+*.tmp
+*.temp
+*.o
+*.obj

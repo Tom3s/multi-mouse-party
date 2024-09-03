@@ -1,5 +1,28 @@
 # Multi Mouse Party (Name work in progress)
 
+## Build
+
+```
+odin build build -out:build.exe
+```
+
+linux:
+```
+./build.exe [arguments]
+```
+
+windows:
+```
+build.exe [arguments]
+```
+
+For help run:
+```
+./build.exe help
+```
+
+It only needs to be build once, the program rebuilds itself if it changed (it watches build/main.odin only).
+
 ## Coding guildlines
 
 Tabs.
