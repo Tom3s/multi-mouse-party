@@ -5,9 +5,10 @@ import "core:c/libc"
 import "core:fmt"
 import "core:strings"
 
+// Do not care about memory allocation
+// this is a script kinda
 main :: proc(){
-    // Do not care about memory allocation
-    // this is a script kinda
+    self_rebuild();
 
     args := parse_args();
     switch args.kind{
@@ -29,6 +30,7 @@ Args :: struct{
             Release,
         },
         full: bool,
+        run:  bool,
     },
 }
 
@@ -48,6 +50,9 @@ parse_args :: proc() -> Args{
         case "-full":
             assert(args.kind == .Build);
             args.build.full = true;
+        case "-run":
+            assert(args.kind == .Build);
+            args.build.run = true;
         case: 
             fmt.println("Unkown argument", arg);
             panic("");
@@ -97,6 +102,46 @@ build :: proc(args: Args){
     case .Release:
         run(`odin build src -collection:src=src -o:speed -out:main.exe`);
     }
+
+    if args.build.run{
+        when ODIN_OS == .Windows {
+            run(`.\main.exe`);
+        } else when ODIN_OS == .Linux {
+            run(`./main.exe`);
+        } else {
+            panic("Unkown OS");
+        }
+    }
+}
+
+
+self_rebuild :: proc(){
+    main_str  := read_file_or_empty("build/main.odin");
+    cache_str := read_file_or_empty("build/cache.tmp");
+
+    cache_hd, err := os.open("build/cache.tmp", os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0o700);
+    assert(err == os.ERROR_NONE);
+    os.write_string(cache_hd, main_str);
+    os.close(cache_hd);
+
+    if main_str != cache_str{
+        fmt.println("Rebuilding self");
+        os.execvp(os.args[0], os.args[1:]);
+        os.exit(0);
+    }
+
+    read_file_or_empty :: proc(path: string) -> string{
+        hd, err := os.open(path, os.O_RDONLY);
+        if err != os.ERROR_NONE do return "";
+
+        size, err2 := os.file_size(hd);
+        if err2 != os.ERROR_NONE do return "";
+
+        buffer := make([]u8, size);
+        os.read_full(hd, buffer[:]);
+        str := cast(string) buffer;
+        return str;
+    }
 }
 
 run :: proc(str: string){
@@ -118,6 +163,9 @@ Argument:
 
     build
         It builds the game, by default it builds in debug mode.
+
+        -run:
+            Runs the game after build
 
         -release:
             Builds the game in release mode

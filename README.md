@@ -21,6 +21,8 @@ For help run:
 ./build.exe help
 ```
 
+It only needs to be build once, the program rebuilds itself if it changed (it watches build/main.odin only).
+
 ## Coding guildlines
 
 Tabs.
