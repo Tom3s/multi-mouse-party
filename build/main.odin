@@ -128,22 +128,15 @@ self_rebuild :: proc(){
         fmt.println("Rebuilding self");
 
         when ODIN_OS == .Windows{
-            run(`del build.exe`);
+            fmt.println("Self rebuild on windows is not supported because it is fucking terrible os");
+            fmt.println("Use 'odin build build -out:build.exe' manually in the command line");
         } else when ODIN_OS == .Linux{
             run(`rm build.exe`);
+            run(`odin build build -out:build.exe`);
+            os.execvp(os.args[0], os.args[1:]);
         } else {
             panic("Unkown OS");
         }
-        run(`odin build build -out:build.exe`);
-        builder: strings.Builder;
-        strings.builder_init(&builder);
-        strings.write_string(&builder, os.args[0]);
-        for arg in os.args[1:]{
-            strings.write_string(&builder, " ");
-            strings.write_string(&builder, arg);
-        }
-        
-        run(strings.to_string(builder));
 
         os.exit(0);
     }
