@@ -8,7 +8,13 @@ import "core:strings"
 // Do not care about memory allocation
 // this is a script kinda
 main :: proc(){
-    self_rebuild();
+    /* 
+        Self rebuild only works on linux
+        because windows is a fucking terrible os
+    */
+    when ODIN_OS == .Linux {
+        self_rebuild();
+    }
 
     args := parse_args();
     switch args.kind{
