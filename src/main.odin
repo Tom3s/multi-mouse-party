@@ -9,10 +9,11 @@ import "core:mem"
 import "core:os"
 import "core:strings"
 
-import mm "manymouse"
 import rl "vendor:raylib"
 
-import Signal "signal"
+import mm     "src:manymouse"
+import mi     "src:mouse_input"
+import Signal "src:signal"
 
 WINDOW_SIZE :: [2]c.int{1280, 720};
 NR_PLAYERS :: 4;
@@ -20,19 +21,17 @@ NR_PLAYERS :: 4;
 App_State :: struct{
     gpa: mem.Allocator,
     frame_alloc: mem.Allocator,
-
-    arena: mem.Arena,
-
 	players: [dynamic]Player,
-
 	shaders: struct {
 		cursor_material: rl.Shader, 
 	},
-
 	textures: struct {
 		cursor_texture: rl.Texture2D,
 		cursor_texture_size: [2]f32,
-	}
+	},
+
+    // Never touch this
+    arena: mem.Arena,
 }
 
 init_app_state :: proc(state: ^App_State){
