@@ -135,7 +135,16 @@ self_rebuild :: proc(){
             panic("Unkown OS");
         }
         run(`odin build build -out:build.exe`);
-        os.execvp(os.args[0], os.args[1:]);
+        builder: strings.Builder;
+        strings.builder_init(&builder);
+        strings.write_string(&builder, os.args[0]);
+        for arg in os.args[1:]{
+            strings.write_string(&builder, " ");
+            strings.write_string(&builder, arg);
+        }
+        
+        run(strings.to_string(builder));
+
         os.exit(0);
     }
 
