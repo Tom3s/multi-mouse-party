@@ -27,9 +27,10 @@ App_State :: struct{
 	targets: [dynamic]Target,
 
 	labels: [16]Label,
-
+ 
 	shaders: struct {
 		cursor_material: rl.Shader, 
+		outline: rl.Shader,
 	},
 	textures: struct {
 		cursor_texture: rl.Texture2D,
@@ -59,11 +60,11 @@ init_app_state :: proc(state: ^App_State){
 
 	for i in 0..<16 {
 		state.labels[i] = make_label();
-		fmt.println("Initial Label Size:", state.labels[i].text_size);
 	}
 
 
-	state.shaders.cursor_material = rl.LoadShader(nil, "shaders/outline_shader.fs");
+	state.shaders.cursor_material = rl.LoadShader(nil, "shaders/sdf_outline_shader.fs");
+	state.shaders.outline = rl.LoadShader(nil, "shaders/general_outline_shader.fs");
 
 	state.textures.cursor_texture = rl.LoadTexture("images/main_cursor.png");
 	state.textures.cursor_texture_size = {
@@ -95,7 +96,7 @@ calculate_motion_vector :: proc(event: mm.Event) -> v2 {
 
 Player :: struct {
 	id: u32,
-	device_id: u32,
+	device_id: mi.Device_Id,
 	cursor: Cursor,
 	color: [4]f32,
 	score: f32,
@@ -128,6 +129,11 @@ main :: proc(){
 
 	nr_mouses := mm.Init();
 	defer mm.Quit();
+
+	// mi.init();
+	// defer mi.close();
+
+	// nr_mouses := mi.detect();
 	
 
     state: App_State;
@@ -186,10 +192,10 @@ init_player :: proc(p: ^Player, id: u32) {
 	p.color = DEFAULT_COLORS[id];
 	p.device_id = get_device_for_assign();
 	// TODO: Check if already used
-	fmt.println("[main.odin] Assigned device ", p.device_id, " to player ", p.id);
+	fmt.println("[main.odin] Assigned device", p.device_id, "to player", p.id);
 }
 
-get_device_for_assign :: proc() -> u32{
+get_device_for_assign :: proc() -> mi.Device_Id{
 	event: mm.Event = {};
 	for {
 		if (mm.PollEvent(&event) == 0) {
@@ -197,7 +203,7 @@ get_device_for_assign :: proc() -> u32{
 		}
 		
 		if (event.type == .Button && event.value == 1) {
-			return event.device;
+			return cast(mi.Device_Id) event.device;
 		}
 	}
 }
@@ -210,15 +216,15 @@ update_input :: proc(state: ^App_State) {
 	*/
 	for &p in state.players {
 		p.cursor.velocity = {0, 0};
-		p.cursor.pressed = false;
+		// p.cursor.pressed = false;
 		p.cursor.just_pressed = false;
 	}
 
-	event: mm.Event = {}
+	event: mm.Event;
 
 	for mm.PollEvent(&event) == 1 { // DO NOT DELETE 
 		for &p in state.players {
-			if p.device_id == event.device {
+			if p.device_id == cast(mi.Device_Id) event.device {
 				if event.type == .Relmotion {
 					relmotion := calculate_motion_vector(event);
 					p.cursor.position += relmotion;
@@ -231,6 +237,26 @@ update_input :: proc(state: ^App_State) {
 			}
 		}	
 	}
+
+	// event, exists := mi.poll();
+
+	// if exists {
+	// 	for &p in state.players {
+	// 		if p.device_id == event.device {
+	// 			#partial switch e in event.kind {
+	// 				case mi.Relative_Motion:
+	// 					p.cursor.position += {cast(f32) e.x, cast(f32) e.y};
+	// 					p.cursor.velocity += {cast(f32) e.x, cast(f32) e.y};
+	// 				case mi.Button:
+	// 					p.cursor.pressed = e.kind == .Left && e.pos == .Down;
+	// 					p.cursor.just_pressed = p.cursor.pressed;
+	// 				case:
+	// 					fmt.println("Unkown input 💀");
+	// 			}
+	// 			break;
+	// 		}
+	// 	}
+	// }
 }
 
 update :: proc(state: ^App_State){
@@ -249,13 +275,14 @@ update :: proc(state: ^App_State){
 		for &p in state.players {
 			if p.cursor.just_pressed && \
 				check_target_collision(target, p.cursor.position) {
-				score := target.lifetime / target.max_lifetime * DEFAULT_TARGET_SCORE;
+				score := linalg.ceil(target.lifetime / target.max_lifetime * DEFAULT_TARGET_SCORE);
 				// TODO: move score calculation, to allow for multipliers (ex. double, triple hits)
 				p.score += score;
 				register_target_hit(&target);
 				spawn_score_label(
 					state,
-					p.cursor.position,
+					// p.cursor.position,
+					target.position,
 					cast(i32) score,
 					rl.ColorFromNormalized(p.color),
 				)
@@ -272,7 +299,7 @@ update :: proc(state: ^App_State){
 				state.players[index].cursor.position - {0, 12}, // TODO: remove magic number
 				hit_count,
 			)
-			bonus_score := 150 * linalg.pow(2.0, cast(f64) hit_count);
+			bonus_score := 1.5 * linalg.pow(2.0, cast(f64) hit_count);
 			state.players[index].score += cast(f32) bonus_score;
 			spawn_score_label(
 				state,
@@ -390,7 +417,7 @@ draw :: proc(state: ^App_State){
 	}
 
 	for &label in state.labels {
-		draw_label(label, state.frame_alloc);
+		draw_label(state, label);
 	}
 
 	for &p, index in state.players {

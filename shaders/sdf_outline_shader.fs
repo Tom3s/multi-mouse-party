@@ -11,7 +11,6 @@ out vec4 finalColor;
 
 uniform sampler2D texture0;
 
-// uniform vec4 WHITE = vec4(1., 1., 1., 0.);
 uniform vec4 BLACK = vec4(0., 0., 0., 1.);
 
 void main(){
