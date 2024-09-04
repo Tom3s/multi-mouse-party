@@ -134,8 +134,10 @@ simple_poll :: proc() -> (Event, bool){
             motion := Relative_Motion{ };
             if mm_e.item == 0{
                 motion.x = cast(int) mm_e.value;
-            } else if mm_e.item == 1{ // For some reason the mouse wheel generates a relative motion event, we discard that
+            } else if mm_e.item == 1{ 
                 motion.y = cast(int) mm_e.value;
+            } else { // For some reason the mouse wheel generates a relative motion event, we discard that
+                return {}, false;
             }
             e.kind = motion;
         case .Absmotion:
