@@ -86,20 +86,6 @@ DEFAULT_COLORS := [?]v4 {
 };
 
 main :: proc(){
-    {
-        mi.init();
-        defer mi.close();
-
-        for {
-            event, has := mi.poll();
-            if has{
-                fmt.println(event);
-            }
-        }
-
-        return;
-    }
-
     context.allocator      = mem.panic_allocator();
     context.temp_allocator = mem.panic_allocator();
 
