@@ -22,6 +22,9 @@ Label :: struct {
 	color: rl.Color,
 	text_size: i32, 
 	
+	outline: i32,
+	outline_color: rl.Color,
+
 	animation_type: Label_Animation,
 
 	visible: bool,
@@ -32,6 +35,8 @@ make_label :: proc(
 	text_size: i32 = 24,
 	position: v2 = {0, 0}, 
 	color: rl.Color = rl.WHITE,
+	outline: i32 = 2,
+	outline_color: rl.Color = rl.BLACK,
 ) -> Label {
 	return Label{
 		text = text,
@@ -41,6 +46,8 @@ make_label :: proc(
 		text_size = text_size,
 		animation_type = .None,
 		visible = false,
+		outline = outline,
+		outline_color = outline_color
 	}
 }
 
@@ -57,13 +64,14 @@ update_label_animation :: proc(label: ^Label, delta: f32) {
 	}
 } 
 
-draw_label :: proc (label: Label, frame_alloc: mem.Allocator) {
+draw_label :: proc (state: ^App_State, label: Label) {
 	if !label.visible {
 		return;
 	}
 
 
-	label_size := cast(f32) (label.text_size * cast(i32) len(label.text)) * 0.4; // TODO: remove magic number
+	out_text := strings.clone_to_cstring(label.text, allocator = state.frame_alloc);
+	label_size := rl.MeasureText(out_text, label.text_size);
 	t := label.lifetime / LABEL_FLOAT_UP_LIFETIME;
 	label_y_offset := ease_out_cubic(t) * cast(f32) label.text_size * 2.5; // TODO: parameterize this constant
 	
@@ -79,8 +87,66 @@ draw_label :: proc (label: Label, frame_alloc: mem.Allocator) {
 		color.a = lerp_u8(color.a, 0, color_t); 
 	}
 
+	if label.outline > 0 {
+		outline_color := label.outline_color
+		if color.a < 255 {
+			outline_color.a = color.a / 4;
+		}
+
+		rl.DrawText(
+			out_text,
+			cast(i32) position.x + label.outline, cast(i32) position.y + label.outline,
+			label.text_size,
+			outline_color
+		);
+		rl.DrawText(
+			out_text,
+			cast(i32) position.x - label.outline, cast(i32) position.y - label.outline,
+			label.text_size,
+			outline_color
+		);
+		rl.DrawText(
+			out_text,
+			cast(i32) position.x - label.outline, cast(i32) position.y + label.outline,
+			label.text_size,
+			outline_color
+		);
+		rl.DrawText(
+			out_text,
+			cast(i32) position.x + label.outline, cast(i32) position.y - label.outline,
+			label.text_size,
+			outline_color
+		);
+		
+		rl.DrawText(
+			out_text,
+			cast(i32) position.x + label.outline, cast(i32) position.y,
+			label.text_size,
+			outline_color
+		);
+		rl.DrawText(
+			out_text,
+			cast(i32) position.x - label.outline, cast(i32) position.y,
+			label.text_size,
+			outline_color
+		);
+		rl.DrawText(
+			out_text,
+			cast(i32) position.x, cast(i32) position.y + label.outline,
+			label.text_size,
+			outline_color
+		);
+		rl.DrawText(
+			out_text,
+			cast(i32) position.x, cast(i32) position.y - label.outline,
+			label.text_size,
+			outline_color
+		);
+
+	}
+
 	rl.DrawText(
-		strings.clone_to_cstring(label.text, allocator = frame_alloc), // TODO: look up unsafe_clone_to_cstring(..)
+		out_text, // TODO: look up unsafe_clone_to_cstring(..)
 		cast(i32) position.x, cast(i32) position.y,
 		label.text_size,
 		color
