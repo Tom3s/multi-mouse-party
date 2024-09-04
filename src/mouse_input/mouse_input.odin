@@ -1,3 +1,6 @@
+/*
+   It is not thread safe
+*/
 package mouse_input
 
 import mm "src:manymouse"
@@ -70,7 +73,58 @@ close :: proc(){
     mm.Quit();
 }
 
+/*
+   Detects the number of mouses available
+*/
+detect :: proc() -> uint{
+    value := mm.Init();
+    assert(value >= 0);
+    return cast(uint) value;
+}
+
+@private
+saved_event: Maybe(Event) = nil;
+
 poll :: proc() -> (Event, bool){
+    saved, has_saved := saved_event.?;
+    if has_saved{
+        saved_event = nil;
+        return saved, true;
+    }
+
+    event, has := simple_poll();
+    if !has do return {}, false;
+
+    relmotion, ok := event.kind.(Relative_Motion);
+    if !ok do return event, true;
+
+    // squashing relmotions together
+    for {
+        new_event, has := simple_poll();
+        if !has {
+            event.kind = relmotion;
+            return event, true;
+        }
+
+        if new_event.device != event.device {
+            saved_event = new_event;
+            event.kind = relmotion;
+            return event, true;
+        }
+
+        new_relmotion, ok := new_event.kind.(Relative_Motion);
+        if !ok {
+            saved_event = new_event;
+            event.kind = relmotion;
+            return event, true;
+        }
+
+        relmotion.x += new_relmotion.x;
+        relmotion.y += new_relmotion.y;
+    }
+}
+
+simple_poll :: proc() -> (Event, bool){
     mm_e: mm.Event;
     if mm.PollEvent(&mm_e) == 1{
         e: Event;
@@ -80,7 +134,7 @@ poll :: proc() -> (Event, bool){
             motion := Relative_Motion{ };
             if mm_e.item == 0{
                 motion.x = cast(int) mm_e.value;
-            } else if mm_e.item == 1{ // For some reason the mouse wheel generates a relative motion event
+            } else if mm_e.item == 1{ // For some reason the mouse wheel generates a relative motion event, we discard that
                 motion.y = cast(int) mm_e.value;
             }
             e.kind = motion;
@@ -123,11 +177,3 @@ poll :: proc() -> (Event, bool){
     return {}, false;
 }
 
-/*
-   Detects the number of mouses available
-*/
-detect :: proc() -> uint{
-    value := mm.Init();
-    assert(value >= 0);
-    return cast(uint) value;
-}
