@@ -17,7 +17,7 @@ import mi     "src:mouse_input"
 import Signal "src:signal"
 
 WINDOW_SIZE :: [2]c.int{1280, 720};
-NR_PLAYERS :: 2;
+NR_PLAYERS :: 4;
 
 App_State :: struct{
     gpa: mem.Allocator,
@@ -35,6 +35,8 @@ App_State :: struct{
 	textures: struct {
 		cursor_texture: rl.Texture2D,
 		cursor_texture_size: [2]f32,
+		crosshair_textures: [4]rl.Texture2D,
+		crosshair_texture_size: [2]f32,
 	},
 
 	// delta_time: time.Duration, // might wanna keep Duration representation
@@ -70,6 +72,15 @@ init_app_state :: proc(state: ^App_State){
 	state.textures.cursor_texture_size = {
 		cast(f32) state.textures.cursor_texture.width,
 		cast(f32) state.textures.cursor_texture.height,
+	}
+
+	state.textures.crosshair_textures[0] = rl.LoadTexture("images/crosshair1.png");
+	state.textures.crosshair_textures[1] = rl.LoadTexture("images/crosshair2.png");
+	state.textures.crosshair_textures[2] = rl.LoadTexture("images/crosshair3.png");
+	state.textures.crosshair_textures[3] = rl.LoadTexture("images/crosshair4.png");
+	state.textures.crosshair_texture_size = {
+		cast(f32) state.textures.crosshair_textures[0].width,
+		cast(f32) state.textures.crosshair_textures[0].height,
 	}
 
 	state.delta_last_tick = time.tick_now();
@@ -393,7 +404,7 @@ draw :: proc(state: ^App_State){
 	}
 
 	// TODO: These could be parameterized
-	treshold: f32 = 0.5;
+	treshold: f32 = 0.65;
 	outline_width: f32 = 0.3;
 	outline_color: v4 = {0, 0, 0, 1.0};
 
@@ -405,9 +416,9 @@ draw :: proc(state: ^App_State){
 		
 		rl.BeginShaderMode(state.shaders.cursor_material);
 			rl.DrawTextureEx(
-				state.textures.cursor_texture,
+				state.textures.crosshair_textures[p.id % 4],
 				p.cursor.position /* center */ \ 
-					- state.textures.cursor_texture_size /* offset for texture */ \
+					- state.textures.crosshair_texture_size /* offset for texture */ \
 					* {CURSOR_SCALE, CURSOR_SCALE} / 2 /* scale of offset */,
 				0.0, // rotation
 				CURSOR_SCALE,
