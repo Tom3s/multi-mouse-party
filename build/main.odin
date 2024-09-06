@@ -8,7 +8,13 @@ import "core:strings"
 // Do not care about memory allocation
 // this is a script kinda
 main :: proc(){
-    self_rebuild();
+    /* 
+        Self rebuild only works on linux
+        because windows is a fucking terrible os
+    */
+    when ODIN_OS == .Linux {
+        self_rebuild();
+    }
 
     args := parse_args();
     switch args.kind{
@@ -126,7 +132,18 @@ self_rebuild :: proc(){
 
     if main_str != cache_str{
         fmt.println("Rebuilding self");
-        os.execvp(os.args[0], os.args[1:]);
+
+        when ODIN_OS == .Windows{
+            fmt.println("Self rebuild on windows is not supported because it is fucking terrible os");
+            fmt.println("Use 'odin build build -out:build.exe' manually in the command line");
+        } else when ODIN_OS == .Linux{
+            run(`rm build.exe`);
+            run(`odin build build -out:build.exe`);
+            os.execvp(os.args[0], os.args[1:]);
+        } else {
+            panic("Unkown OS");
+        }
+
         os.exit(0);
     }
 
