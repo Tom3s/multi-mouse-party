@@ -33,8 +33,13 @@ Button_Kind :: enum {
     Rigth,
     Middle,
 
-    // ... I guess reserved for other
+    // reserved spaces currently did not find mouse which uses them
+    Reserved_1, 
+    Reserved_2, 
+    Reserved_3, 
+    Reserved_4, 
 
+    // side buttons on a usual mouse
     Extra_1 = 7,
     Extra_2,
 }
@@ -64,9 +69,37 @@ Scroll :: struct{
 
 Disconnected :: struct{}
 
+
+State :: struct{
+    reltive_motion:  [2]int,
+    absolute_motion: [2]int,
+    disconnected: bool,
+    button: [Button_Kind]struct{
+        pressed: bool, 
+        just_pressed: bool,
+        just_released: bool,
+    },
+    scroll: [2]int,
+}
+
+@private
+global: struct{
+    state_len: int,
+    states: [100]State, // We only support about 6 mouses or so, so it does not need to be dynamic
+}
+
+@private
+clear :: proc(){
+    for i in 0..<global.state_len{
+        global.states[i] = {};
+    }
+}
+
 init :: proc(){
     ret := mm.Init();
     assert(ret >= 0);
+    global.state_len = cast(int) ret;
+    clear();
 }
 
 close :: proc(){
@@ -77,53 +110,70 @@ close :: proc(){
    Detects the number of mouses available
 */
 detect :: proc() -> uint{
+    mm.Quit();
     value := mm.Init();
     assert(value >= 0);
+    global.state_len = cast(int) value;
+    clear();
     return cast(uint) value;
 }
 
-@private
-saved_event: Maybe(Event) = nil;
+// Call every frame
+update :: proc(){
+    for i in 0..<global.state_len{
+        global.states[i].reltive_motion  = {};
+        global.states[i].absolute_motion = {};
+        global.states[i].scroll = {};
 
-poll :: proc() -> (Event, bool){
-    saved, has_saved := saved_event.?;
-    if has_saved{
-        saved_event = nil;
-        return saved, true;
+        for kind in Button_Kind{
+            global.states[i].button[kind].just_pressed  = false;
+            global.states[i].button[kind].just_released = false;
+        }
     }
 
-    event, has := simple_poll();
-    if !has do return {}, false;
-
-    relmotion, ok := event.kind.(Relative_Motion);
-    if !ok do return event, true;
-
-    // squashing relmotions together
     for {
-        new_event, has := simple_poll();
-        if !has {
-            event.kind = relmotion;
-            return event, true;
-        }
+        event, has := simple_poll();
+        if !has do return;
 
-        if new_event.device != event.device {
-            saved_event = new_event;
-            event.kind = relmotion;
-            return event, true;
-        }
+        state := &global.states[event.device];
 
-        new_relmotion, ok := new_event.kind.(Relative_Motion);
-        if !ok {
-            saved_event = new_event;
-            event.kind = relmotion;
-            return event, true;
+        switch e in event.kind{
+        case Relative_Motion:
+            state.reltive_motion.x += e.x;
+            state.reltive_motion.y += e.y;
+        case Absolute_Motion:
+            state.absolute_motion.x += e.x;
+            state.absolute_motion.y += e.y;
+        case Button:
+            state.button[e.kind].just_pressed  = e.pos == .Down;
+            state.button[e.kind].just_released = e.pos == .Up;
+            state.button[e.kind].pressed       = e.pos == .Down;
+        case Scroll:
+            if e.wheel == .Vertical{
+                if e.direction == .Up{
+                    state.scroll.y -= 1;
+                } else if e.direction == .Down{
+                    state.scroll.y += 1;
+                }
+            } else if e.wheel == .Horizontal{
+                if e.direction == .Left{
+                    state.scroll.x -= 1;
+                } else if e.direction == .Right{
+                    state.scroll.x += 1;
+                }
+            }
+        case Disconnected:
+            state.disconnected = true;
         }
-
-        relmotion.x += new_relmotion.x;
-        relmotion.y += new_relmotion.y;
     }
 }
 
+// Need to call update on the frame before poll
+poll :: proc(device: Device_Id) -> State{
+    return global.states[device];
+}
+
+@private
 simple_poll :: proc() -> (Event, bool){
     mm_e: mm.Event;
     if mm.PollEvent(&mm_e) == 1{
@@ -136,8 +186,8 @@ simple_poll :: proc() -> (Event, bool){
                 motion.x = cast(int) mm_e.value;
             } else if mm_e.item == 1{ 
                 motion.y = cast(int) mm_e.value;
-            } else { // For some reason the mouse wheel generates a relative motion event, we discard that
-                return {}, false;
+            } else { // For some reason the mouse scroll generates a relative motion event, we discard that
+                return simple_poll(); // get the scroll 
             }
             e.kind = motion;
         case .Absmotion:
