@@ -71,7 +71,7 @@ Disconnected :: struct{}
 
 
 State :: struct{
-    reltive_motion:  [2]int,
+    relative_motion:  [2]int,
     absolute_motion: [2]int,
     disconnected: bool,
     button: [Button_Kind]struct{
@@ -121,7 +121,7 @@ detect :: proc() -> uint{
 // Call every frame
 update :: proc(){
     for i in 0..<global.state_len{
-        global.states[i].reltive_motion  = {};
+        global.states[i].relative_motion  = {};
         global.states[i].absolute_motion = {};
         global.states[i].scroll = {};
 
@@ -139,8 +139,8 @@ update :: proc(){
 
         switch e in event.kind{
         case Relative_Motion:
-            state.reltive_motion.x += e.x;
-            state.reltive_motion.y += e.y;
+            state.relative_motion.x += e.x;
+            state.relative_motion.y += e.y;
         case Absolute_Motion:
             state.absolute_motion.x += e.x;
             state.absolute_motion.y += e.y;
