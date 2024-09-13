@@ -71,15 +71,15 @@ Disconnected :: struct{}
 
 
 State :: struct{
-    relative_motion:  [2]int,
-    absolute_motion: [2]int,
+    relative_motion: [2]f32,
+    absolute_motion: [2]f32,
     disconnected: bool,
     button: [Button_Kind]struct{
         pressed: bool, 
         just_pressed: bool,
         just_released: bool,
     },
-    scroll: [2]int,
+    scroll: [2]f32,
 }
 
 @private
@@ -139,11 +139,11 @@ update :: proc(){
 
         switch e in event.kind{
         case Relative_Motion:
-            state.relative_motion.x += e.x;
-            state.relative_motion.y += e.y;
+            state.relative_motion.x += cast(f32) e.x;
+            state.relative_motion.y += cast(f32) e.y;
         case Absolute_Motion:
-            state.absolute_motion.x += e.x;
-            state.absolute_motion.y += e.y;
+            state.absolute_motion.x += cast(f32) e.x;
+            state.absolute_motion.y += cast(f32) e.y;
         case Button:
             state.button[e.kind].just_pressed  = e.pos == .Down;
             state.button[e.kind].just_released = e.pos == .Up;
