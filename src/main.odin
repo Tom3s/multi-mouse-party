@@ -12,12 +12,11 @@ import "core:time"
 
 import rl "vendor:raylib"
 
-import mm     "src:manymouse"
 import mi     "src:mouse_input"
 import Signal "src:signal"
 
 WINDOW_SIZE :: [2]c.int{1280, 720};
-NR_PLAYERS :: 4;
+NR_PLAYERS :: 2;
 
 App_State :: struct{
     gpa: mem.Allocator,
@@ -93,18 +92,6 @@ Cursor :: struct {
 	just_pressed: bool,
 }
 
-calculate_motion_vector :: proc(event: mm.Event) -> v2 {
-	v: v2 = {}
-	
-	if (event.item == 0) {
-		v.x += cast(f32) event.value;
-	} else if (event.item == 1) {
-		v.y += cast(f32) event.value;	
-	}
-
-	return v;
-}
-
 Player :: struct {
 	id: u32,
 	device_id: mi.Device_Id,
@@ -138,13 +125,13 @@ main :: proc(){
 
 	// Eloszor kell a RayLib Init
 
-	nr_mouses := mm.Init();
-	defer mm.Quit();
+	// nr_mouses := mm.Init();
+	// defer mm.Quit();
 
-	// mi.init();
-	// defer mi.close();
+	mi.init();
+	defer mi.close();
 
-	// nr_mouses := mi.detect();
+	nr_mouses := mi.detect();
 	
 
     state: App_State;
@@ -207,67 +194,37 @@ init_player :: proc(p: ^Player, id: u32) {
 }
 
 get_device_for_assign :: proc() -> mi.Device_Id{
-	event: mm.Event = {};
+	// TODO: add similar functionality to mouse_input
 	for {
-		if (mm.PollEvent(&event) == 0) {
-			continue;
-		}
-		
-		if (event.type == .Button && event.value == 1) {
-			return cast(mi.Device_Id) event.device;
+		mi.update()
+		for i in 0..<mi.nr_mouses_no_detect() {
+			state := mi.poll(cast(mi.Device_Id) i);
+			if state.button[mi.Button_Kind.Left].just_pressed {
+				return cast(mi.Device_Id) i;
+			}
 		}
 	}
+
 }
 
 update_input :: proc(state: ^App_State) {
-	/*
-		Kell ide a for, mert van h tobb event-be
-		kuldi az inputot a driver (pl ha >500hz az eger szenzor)
-		s olyankor input lag lesz
-	*/
 	for &p in state.players {
 		p.cursor.velocity = {0, 0};
 		// p.cursor.pressed = false;
 		p.cursor.just_pressed = false;
 	}
+	
+	mi.update();
 
-	event: mm.Event;
+	for &p in state.players {
+		state: mi.State = mi.poll(p.device_id);
+		p.cursor.position += state.relative_motion;
+		p.cursor.velocity += state.relative_motion;
+		// TODO: don't unnecessarily duplicate state info for player
+		p.cursor.pressed = state.button[mi.Button_Kind.Left].pressed
+		p.cursor.just_pressed = state.button[mi.Button_Kind.Left].just_pressed
 
-	for mm.PollEvent(&event) == 1 { // DO NOT DELETE 
-		for &p in state.players {
-			if p.device_id == cast(mi.Device_Id) event.device {
-				if event.type == .Relmotion {
-					relmotion := calculate_motion_vector(event);
-					p.cursor.position += relmotion;
-					p.cursor.velocity += relmotion;
-				} else if event.type == .Button {
-					p.cursor.pressed = event.value == 1;
-					p.cursor.just_pressed = p.cursor.pressed
-				}
-				break;
-			}
-		}	
-	}
-
-	// event, exists := mi.poll();
-
-	// if exists {
-	// 	for &p in state.players {
-	// 		if p.device_id == event.device {
-	// 			#partial switch e in event.kind {
-	// 				case mi.Relative_Motion:
-	// 					p.cursor.position += {cast(f32) e.x, cast(f32) e.y};
-	// 					p.cursor.velocity += {cast(f32) e.x, cast(f32) e.y};
-	// 				case mi.Button:
-	// 					p.cursor.pressed = e.kind == .Left && e.pos == .Down;
-	// 					p.cursor.just_pressed = p.cursor.pressed;
-	// 				case:
-	// 					fmt.println("Unkown input 💀");
-	// 			}
-	// 			break;
-	// 		}
-	// 	}
-	// }
+	}	
 }
 
 update :: proc(state: ^App_State){
