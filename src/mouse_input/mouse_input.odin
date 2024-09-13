@@ -229,3 +229,7 @@ simple_poll :: proc() -> (Event, bool){
     return {}, false;
 }
 
+nr_mouses_no_detect :: proc() -> int {
+	return global.state_len;
+}
+
