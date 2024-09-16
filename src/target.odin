@@ -9,7 +9,7 @@ DEFAULT_TARGET_SIZE :: 64;
 DEFAULT_TARGET_LIFETIME :: 3.0;
 TARGET_RESPAWN_TRESHOLD :: 1.0;
 
-DEFAULT_TARGET_SCORE :: DEFAULT_TARGET_LIFETIME * 1;
+DEFAULT_TARGET_SCORE :: 5;
 
 Target :: struct {
 	position: v2,
@@ -57,6 +57,10 @@ respawn_target :: proc(target: ^Target) {
 register_target_hit :: proc(target: ^Target) {
 	target.lifetime = 0.0;
 	target.enabled = false;
+}
+
+get_target_score :: proc(target: Target) -> f32 {
+	return linalg.ceil(target.lifetime / target.max_lifetime * DEFAULT_TARGET_SCORE);
 }
 
 check_target_collision :: proc(target: Target, position: v2) -> bool {

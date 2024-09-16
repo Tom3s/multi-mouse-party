@@ -15,7 +15,11 @@ TARGET_GRID_SIZE :: [2]i32{7, 4};
 TARGET_ROUNDS_TILL_MAX :: 10;
 
 
-spawn_targets_in_grid :: proc(state: ^App_State, nr_targets: int) {
+spawn_targets_in_grid :: proc(
+	state: ^App_State, 
+	nr_targets: int,
+	target_lifetime: f32,
+) {
 	grid_dimensions_padded := TARGET_GRID_SIZE + {1, 1};
 	grid_tile_size := min(
 		cast(f32) WINDOW_SIZE.x / cast(f32) grid_dimensions_padded.x,
@@ -39,6 +43,7 @@ spawn_targets_in_grid :: proc(state: ^App_State, nr_targets: int) {
 			cast(f32) padding.y + grid_tile_size * cast(f32)(position_on_grid.y + 1),
 		}
 
+		target.max_lifetime = target_lifetime;
 		target.lifetime = target.max_lifetime;
 		target.enabled = true;
 

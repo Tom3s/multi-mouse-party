@@ -16,7 +16,7 @@ import mi     "src:mouse_input"
 import Signal "src:signal"
 
 WINDOW_SIZE :: [2]c.int{1280, 720};
-NR_PLAYERS :: 1;
+NR_PLAYERS :: 2;
 
 App_State :: struct{
     gpa: mem.Allocator,
@@ -252,10 +252,18 @@ update :: proc(state: ^App_State){
 		
 		max_targets := TARGET_GRID_SIZE.x * TARGET_GRID_SIZE.y;
 		targets_to_spawn := linalg.lerp(
-			8.0, cast(f64) max_targets, 
+			5.0, cast(f64) max_targets, 
 			linalg.clamp((cast(f64) state.target_state.current_wave / TARGET_ROUNDS_TILL_MAX), 0, 1),
 		)
-		spawn_targets_in_grid(state, cast(int) targets_to_spawn);
+		target_lifetime := linalg.lerp(
+			3.0, 1.0, 
+			linalg.clamp((cast(f64) state.target_state.current_wave / (TARGET_ROUNDS_TILL_MAX * 2)), 0, 1),
+		)
+		spawn_targets_in_grid(
+			state, 
+			cast(int) targets_to_spawn,
+			cast(f32) target_lifetime,
+		);
 		state.target_state.current_wave += 1;
 		state.target_state.time_since_last_spawn = 0.0;
 	}
@@ -265,8 +273,9 @@ update :: proc(state: ^App_State){
 		for &p in state.players {
 			if p.cursor.just_pressed && \
 				check_target_collision(target, p.cursor.position) {
-				score := linalg.ceil(target.lifetime / target.max_lifetime * DEFAULT_TARGET_SCORE);
 				// TODO: move score calculation, to allow for multipliers (ex. double, triple hits)
+				// score := linalg.ceil(target.lifetime / target.max_lifetime * DEFAULT_TARGET_SCORE);
+				score := get_target_score(target);
 				p.score += score;
 				register_target_hit(&target);
 				spawn_score_label(
