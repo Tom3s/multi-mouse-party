@@ -6,7 +6,7 @@ import "core:math/linalg"
 import rl "vendor:raylib"
 
 DEFAULT_TARGET_SIZE :: 64;
-DEFAULT_TARGET_LIFETIME :: 5.0;
+DEFAULT_TARGET_LIFETIME :: 3.0;
 TARGET_RESPAWN_TRESHOLD :: 1.0;
 
 DEFAULT_TARGET_SCORE :: DEFAULT_TARGET_LIFETIME * 1;
@@ -33,9 +33,9 @@ update_target :: proc(target: ^Target, state: App_State) {
 	target.lifetime -= cast(f32) state.delta_time;
 	if target.lifetime <= 0.0 {
 		target.enabled = false;
-		if target.lifetime <= -TARGET_RESPAWN_TRESHOLD {
-			respawn_target(target);
-		}
+		// if target.lifetime <= -TARGET_RESPAWN_TRESHOLD {
+		// 	respawn_target(target);
+		// }
 	} 
 }
 

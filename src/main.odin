@@ -16,14 +16,14 @@ import mi     "src:mouse_input"
 import Signal "src:signal"
 
 WINDOW_SIZE :: [2]c.int{1280, 720};
-NR_PLAYERS :: 2;
+NR_PLAYERS :: 1;
 
 App_State :: struct{
     gpa: mem.Allocator,
     frame_alloc: mem.Allocator,
 	players: [dynamic]Player,
 
-	targets: [dynamic]Target,
+	target_state: Target_Minigame_State,
 
 	labels: [16]Label,
  
@@ -54,10 +54,10 @@ init_app_state :: proc(state: ^App_State){
     state.frame_alloc = mem.arena_allocator(&state.arena);
 
 	state.players = make([dynamic]Player, 0, state.gpa);
-	state.targets = make([dynamic]Target, 0, state.gpa);
-	for i in 0..<10 {
-		append(&state.targets, make_target());
-	}
+	state.target_state.targets = make([dynamic]Target, 0, state.gpa);
+	// for i in 0..<10 {
+	// 	append(&state.targets, make_target());
+	// }
 
 	for i in 0..<16 {
 		state.labels[i] = make_label();
@@ -114,6 +114,8 @@ main :: proc(){
     context.allocator      = mem.panic_allocator();
     context.temp_allocator = mem.panic_allocator();
 
+
+
     rl.InitWindow(WINDOW_SIZE.x, WINDOW_SIZE.y, "Multi Mouse Party (DEBUG)");
     defer rl.CloseWindow();
 
@@ -137,7 +139,11 @@ main :: proc(){
     state: App_State;
     init_app_state(&state);
 
-	
+	// for i in 1..<7 * 4 {
+	// 	spawn_targets_in_grid(&state, i);
+	// }
+
+	// if true do return;
 
 	for i in 0..<NR_PLAYERS {
 
@@ -161,9 +167,10 @@ main :: proc(){
 		append(&state.players, p);
 	}
 
-	for &target in state.targets {
-		respawn_target(&target);
-	}
+	// for &target in state.targets {
+	// 	respawn_target(&target);
+	// }
+	state.target_state.time_since_last_spawn = DEFAULT_TARGET_LIFETIME;
 
 	// Main loop
     for !rl.WindowShouldClose(){
@@ -230,16 +237,31 @@ update_input :: proc(state: ^App_State) {
 update :: proc(state: ^App_State){
 	update_input(state);
 	update_delta_time(state);
+	update_target_state(state);
 
 	for &label in state.labels {
 		update_label_animation(&label, cast(f32) state.delta_time);
 	}
 
+
 	
 	player_hits: [dynamic]int = make([dynamic]int, NR_PLAYERS, state.frame_alloc);
 
-	for &target in state.targets {
-		update_target(&target, state^);
+	if state.target_state.time_since_last_spawn > DEFAULT_TARGET_LIFETIME + TARGET_RESPAWN_TRESHOLD {
+		clear(&state.target_state.targets);
+		
+		max_targets := TARGET_GRID_SIZE.x * TARGET_GRID_SIZE.y;
+		targets_to_spawn := linalg.lerp(
+			8.0, cast(f64) max_targets, 
+			linalg.clamp((cast(f64) state.target_state.current_wave / TARGET_ROUNDS_TILL_MAX), 0, 1),
+		)
+		spawn_targets_in_grid(state, cast(int) targets_to_spawn);
+		state.target_state.current_wave += 1;
+		state.target_state.time_since_last_spawn = 0.0;
+	}
+
+
+	for &target in state.target_state.targets {
 		for &p in state.players {
 			if p.cursor.just_pressed && \
 				check_target_collision(target, p.cursor.position) {
@@ -356,7 +378,7 @@ draw :: proc(state: ^App_State){
 	rl.ClearBackground(rl.GetColor(BACKGROUND_CLEAR_COLOR));
 
 
-	for target in state.targets {
+	for target in state.target_state.targets {
 		draw_target(target);
 	}
 
