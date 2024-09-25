@@ -4,6 +4,8 @@ import "core:math/linalg"
 import "core:math/rand"
 import "core:fmt"
 
+import rl "vendor:raylib"
+
 Target_Minigame_Phase :: enum {
 	GRID,
 	ALIEN,
@@ -68,19 +70,35 @@ spawn_targets_in_grid :: proc(
 
 }
 
+// JUMPING_TARGET_SIZES :: f32{24, 32, 48, 64, 96};
+// Jumping_Target_Size :: enum {
+// 	TINY = 24,
+// 	SMALL = 32,
+// 	NORMAL = 48,
+// 	LARGE = 64,
+// 	HUGE = 96, 
+// }
+
 spawn_jumping_target :: proc(
 	state: ^App_State, 
 ) {
+	target_sizes: [5]f32 = {32, 40, 48, 56, 64};
+
+
 	target := make_target()
 	target.enabled = true;
+
+	// TODO: do custom distribution
+	target.size = target_sizes[rand.int31_max(5)];
+
 	target.type = .JUMPING;
+	
 	// -1200 ~ middle
 	// -1300 just top of screen
 	// => +-100
-
 	target.velocity = {0, -1200};
-	
 	y_velocity_offset := rand.float32_range(-100, 100);
+	
 	target.velocity.y += y_velocity_offset;
 	target.position.y = cast(f32) WINDOW_SIZE.y + target.size;
 
@@ -90,7 +108,11 @@ spawn_jumping_target :: proc(
 	x_velocity_offset := -(target.position.x - (cast(f32) WINDOW_SIZE.x / 2));
 	target.velocity.x += x_velocity_offset;
 
-
+	target.color = rl.ColorFromHSV(
+		rand.float32_range(0, 360.0),
+		rand.float32_range(0.7, 1.0),
+		rand.float32_range(0.5, 1.0),
+	)
 
 	fmt.println("New target pos: ", target.position, " ; velocity: ", target.velocity);
 
@@ -190,12 +212,13 @@ update_target_state :: proc(state: ^App_State) {
 
 		// spawn_jumping_target(state);
 
+		state.target_state.current_wave += 1;
 		state.target_state.time_since_last_spawn = 0.0;
-		state.target_state.targets_to_spawn = 5;
+		state.target_state.targets_to_spawn = 5 + state.target_state.current_wave;
 	}
 	
 	if state.target_state.phase == .JUMPING {
-		if state.target_state.time_since_last_spawn > 0.35 \
+		if state.target_state.time_since_last_spawn > 0.25 \
 			&& state.target_state.targets_to_spawn > 0 {
 			spawn_jumping_target(state);
 			state.target_state.time_since_last_spawn = 0.0;

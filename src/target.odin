@@ -28,6 +28,8 @@ Target :: struct {
 	enabled: bool,
 	lifetime: f32,
 	max_lifetime: f32,
+
+	color: rl.Color,
 }
 
 make_target :: proc() -> Target {
@@ -86,7 +88,15 @@ register_target_hit :: proc(target: ^Target) {
 }
 
 get_target_score :: proc(target: Target) -> f32 {
-	return linalg.ceil(target.lifetime / target.max_lifetime * DEFAULT_TARGET_SCORE);
+	#partial switch(target.type) {
+		case .STATIC:
+			return linalg.ceil(target.lifetime / target.max_lifetime * DEFAULT_TARGET_SCORE);
+		case .JUMPING:
+			// 20480 = 32 * 32 * 20 points
+			return linalg.ceil((20480) / (target.size * target.size));
+		case:
+			return 1;
+	}
 }
 
 check_target_collision :: proc(target: Target, position: v2) -> bool {
@@ -104,12 +114,23 @@ draw_target :: proc(target: Target) {
 		return;
 	}
 
-	full_health_color: [4]u8 = {0xDD, 0xAA, 0x20, 0xFF};
-	no_health_color: [4]u8 = {0x40, 0x40, 0x40, 0xFF};
+	color := rl.GetColor(0xFF_FF_FF_FF);
 
-	t := target.lifetime / target.max_lifetime;
 
-	color := mix_color(no_health_color, full_health_color, t);
+	#partial switch (target.type) {
+		case .STATIC:
+			full_health_color: [4]u8 = {0xDD, 0xAA, 0x20, 0xFF};
+			no_health_color: [4]u8 = {0x40, 0x40, 0x40, 0xFF};
+			
+			t := target.lifetime / target.max_lifetime;
+			
+			color = cast(rl.Color) mix_color(no_health_color, full_health_color, t);
+
+		case .JUMPING:
+			color = target.color;
+		case:
+			fmt.println("[target.odin] Unhandle target type color")
+	}
 
 	rl.DrawCircle(
 		cast(i32) target.position.x,
