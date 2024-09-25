@@ -8,11 +8,22 @@ import rl "vendor:raylib"
 DEFAULT_TARGET_SIZE :: 64;
 DEFAULT_TARGET_LIFETIME :: 3.0;
 TARGET_RESPAWN_TRESHOLD :: 1.0;
+TARGET_GRAVITY :: 1150.0;
 
 DEFAULT_TARGET_SCORE :: 5;
 
+Target_Type :: enum {
+	STATIC,
+	JUMPING,
+	ON_PATH,
+	ON_ROPE,
+}
+
 Target :: struct {
+	type: Target_Type,
+
 	position: v2,
+	velocity: v2,
 	size: f32,
 	enabled: bool,
 	lifetime: f32,
@@ -21,7 +32,9 @@ Target :: struct {
 
 make_target :: proc() -> Target {
 	return Target{
+		type = .STATIC,
 		position = {0,0},
+		velocity = {0,0},
 		size = DEFAULT_TARGET_SIZE,
 		enabled = false,
 		lifetime = 0.0,
@@ -31,12 +44,25 @@ make_target :: proc() -> Target {
 
 update_target :: proc(target: ^Target, state: App_State) {
 	target.lifetime -= cast(f32) state.delta_time;
-	if target.lifetime <= 0.0 {
-		target.enabled = false;
-		// if target.lifetime <= -TARGET_RESPAWN_TRESHOLD {
-		// 	respawn_target(target);
-		// }
-	} 
+
+	#partial switch (target.type) {
+		case .STATIC:
+			if target.lifetime <= 0.0 {
+				target.enabled = false;
+			} 
+
+		case .JUMPING:
+			target.velocity.y += TARGET_GRAVITY * cast(f32) state.delta_time;
+			target.position += target.velocity * cast(f32) state.delta_time;
+
+			if target.velocity.y > 0 && target.position.y > cast(f32) WINDOW_SIZE.y + target.size {
+				target.enabled = false;
+			}
+			// fmt.println("Jumping target: ", target.position);
+
+		case:
+			fmt.println("[target.odin] Unhandled target type");
+	}
 }
 
 respawn_target :: proc(target: ^Target) {

@@ -171,6 +171,7 @@ main :: proc(){
 	// 	respawn_target(&target);
 	// }
 	state.target_state.time_since_last_spawn = DEFAULT_TARGET_LIFETIME;
+	state.target_state.phase = .JUMPING;
 
 	// Main loop
     for !rl.WindowShouldClose(){
@@ -247,28 +248,6 @@ update :: proc(state: ^App_State){
 	
 	player_hits: [dynamic]int = make([dynamic]int, NR_PLAYERS, state.frame_alloc);
 
-	if state.target_state.time_since_last_spawn > DEFAULT_TARGET_LIFETIME + TARGET_RESPAWN_TRESHOLD {
-		clear(&state.target_state.targets);
-		
-		max_targets := TARGET_GRID_SIZE.x * TARGET_GRID_SIZE.y;
-		targets_to_spawn := linalg.lerp(
-			5.0, cast(f64) max_targets, 
-			linalg.clamp((cast(f64) state.target_state.current_wave / TARGET_ROUNDS_TILL_MAX), 0, 1),
-		)
-		target_lifetime := linalg.lerp(
-			3.0, 1.0, 
-			linalg.clamp((cast(f64) state.target_state.current_wave / (TARGET_ROUNDS_TILL_MAX * 2)), 0, 1),
-		)
-		spawn_targets_in_grid(
-			state, 
-			cast(int) targets_to_spawn,
-			cast(f32) target_lifetime,
-		);
-		state.target_state.current_wave += 1;
-		state.target_state.time_since_last_spawn = 0.0;
-	}
-
-
 	for &target in state.target_state.targets {
 		for &p in state.players {
 			if p.cursor.just_pressed && \
@@ -278,6 +257,7 @@ update :: proc(state: ^App_State){
 				score := get_target_score(target);
 				p.score += score;
 				register_target_hit(&target);
+				state.target_state.targets_hit += 1;
 				spawn_score_label(
 					state,
 					// p.cursor.position,
